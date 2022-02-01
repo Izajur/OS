@@ -96,6 +96,7 @@ int main() {
     int jobsCreated = 0, jobsServed = 0, jobsLost = 0, contextSwitch = 0;
     const int MAXTIME = 300;
     queue<Process> priorityQueue[NUMPRIORITY];
+    queue<Process> readyQueue;
     CPU CPUState;
     Process task;
     CPUState.idle = true;
@@ -104,25 +105,34 @@ int main() {
             CPUState.idle = true;
             jobsServed += 1;
         }
-        if(!createJob(time, task)) {
-            jobsCreated += 1;
-            if(task.priority==0)
-                priorityQueue[0].push(task);
-            else if(task.priority==1)
-                priorityQueue[1].push(task);
-            else
-                priorityQueue[2].push(task);
+        int numJobs = rand()%4;
+        while(numJobs--) {
+            if(!createJob(time, task)) {
+                jobsCreated += 1;
+                if(task.priority==0)
+                    priorityQueue[0].push(task);
+                else if(task.priority==1)
+                    priorityQueue[1].push(task);
+                else
+                    priorityQueue[2].push(task);
+            }
         }
-        if(!CPUState.idle)
-            continue;
         if(!getNextTask(priorityQueue, task))
             continue;
-        schedule(time, task, CPUState);
+        if(readyQueue.size()>=QUEUESIZE) {
+            jobsLost += 1;
+            continue;
+        }
+        readyQueue.push(task);
+        if(CPUState.idle and readyQueue.size()) {
+            schedule(time, readyQueue.front(), CPUState);
+            readyQueue.pop();
+        }
     }
     cout << "Number of jobs created: " << jobsCreated << endl;
     cout << "Number of jobs served: " << jobsServed << endl;
     cout << "Number of jobs Lost: " << jobsLost << endl;
-    cout << "Number of jobs in Ready Queue: " << priorityQueue[0].size()+priorityQueue[1].size()+priorityQueue[2].size() << endl;
+    cout << "Number of jobs in Ready Queue: " << readyQueue.size() << endl;
     cout << "Job executing in CPU: " << !CPUState.idle << endl;
     cout << "Number of Preemption: " << contextSwitch << endl;
     return 0;
